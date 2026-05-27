@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LLM API — FastAPI + Ollama</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #16161a;
+      --surface2: #1e1e24;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.15);
+      --text: #f0eee8;
+      --muted: #888780;
+      --accent: #5DCAA5;
+      --accent-dim: rgba(93,202,165,0.12);
+      --accent-dim2: rgba(93,202,165,0.06);
+      --error: #F09595;
+      --error-dim: rgba(240,149,149,0.1);
+      --font-main: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 6rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 20px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(93,202,165,0.2);
+      padding: 6px 16px;
+      border-radius: 100px;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 400;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 1350px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 2.5rem;
+      gap: 0;
+    }
+
+    .tab {
+      font-family: var(--font-main);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 1rem 1rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .panel { display: none; padding: 1.75rem; }
+    .panel.active { display: block; }
+
+    .field-label {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 20px;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    textarea { min-height: 110px; }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .row .field { flex: 1; }
+
+    .btn {
+      width: 18%;
+      margin-top: 14px;
+      padding: 14px;
+      background: var(--accent);
+      color: #04342C;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-main);
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .result-box {
+      margin-top: 1.25rem;
+      background: var(--accent-dim2);
+      border: 1px solid rgba(93,202,165,0.15);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: none;
+    }
+
+    .result-box.visible { display: block; }
+
+    .result-label {
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .result-text {
+      font-family: var(--font-mono);
+      font-size: 21px;
+      color: var(--text);
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .error-box {
+      margin-top: 1.25rem;
+      background: var(--error-dim);
+      border: 1px solid rgba(240,149,149,0.2);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: none;
+    }
+
+    .error-box.visible { display: block; }
+
+    .error-text {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--error);
+      line-height: 1.6;
+    }
+
+    .loading {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 25px;
+    }
+
+    .loading.visible { display: flex; }
+
+    .dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s infinite;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 18px;
+      font-family: var(--font-mono);
+      text-align: center;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">FastAPI + Ollama + Llama 3.2</div>
+    <h1>LLM <span>API</span></h1>
+    <p class="subtitle">Ask · Summarize · Translate — powered by local AI</p>
+  </header>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('ask', this)">
+        <span class="tab-icon">💬</span> Ask
+      </button>
+      <button class="tab" onclick="switchTab('summarize', this)">
+        <span class="tab-icon">📄</span> Summarize
+      </button>
+      <button class="tab" onclick="switchTab('translate', this)">
+        <span class="tab-icon">🌍</span> Translate
+      </button>
+    </div>
+
+    <!-- ASK PANEL -->
+    <div class="panel active" id="panel-ask">
+      <label class="field-label">Your question</label>
+      <textarea id="ask-input" placeholder="What is machine learning?"></textarea>
+      <button class="btn" onclick="callApi('ask')">Ask AI</button>
+      <div class="loading" id="ask-loading">
+        <div class="dots"><span></span><span></span><span></span></div>
+        Thinking...
+      </div>
+      <div class="error-box" id="ask-error">
+        <div class="error-text" id="ask-error-text"></div>
+      </div>
+      <div class="result-box" id="ask-result">
+        <div class="result-label">Answer</div>
+        <div class="result-text" id="ask-result-text"></div>
+      </div>
+    </div>
+
+    <!-- SUMMARIZE PANEL -->
+    <div class="panel" id="panel-summarize">
+      <label class="field-label">Text to summarize</label>
+      <textarea id="summarize-input" placeholder="Paste your long text here..." style="min-height: 140px;"></textarea>
+      <button class="btn" onclick="callApi('summarize')">Summarize</button>
+      <div class="loading" id="summarize-loading">
+        <div class="dots"><span></span><span></span><span></span></div>
+        Summarizing...
+      </div>
+      <div class="error-box" id="summarize-error">
+        <div class="error-text" id="summarize-error-text"></div>
+      </div>
+      <div class="result-box" id="summarize-result">
+        <div class="result-label">Summary</div>
+        <div class="result-text" id="summarize-result-text"></div>
+      </div>
+    </div>
+
+    <!-- TRANSLATE PANEL -->
+    <div class="panel" id="panel-translate">
+      <label class="field-label">Text to translate</label>
+      <textarea id="translate-input" placeholder="Hello, how are you?"></textarea>
+      <div class="row">
+        <div class="field">
+          <label class="field-label">Target language</label>
+          <input type="text" id="translate-lang" placeholder="e.g. French, Spanish, Arabic" />
+        </div>
+      </div>
+      <button class="btn" onclick="callApi('translate')">Translate</button>
+      <div class="loading" id="translate-loading">
+        <div class="dots"><span></span><span></span><span></span></div>
+        Translating...
+      </div>
+      <div class="error-box" id="translate-error">
+        <div class="error-text" id="translate-error-text"></div>
+      </div>
+      <div class="result-box" id="translate-result">
+        <div class="result-label">Translation</div>
+        <div class="result-text" id="translate-result-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    running on <a href="http://127.0.0.1:8000/docs" target="_blank">127.0.0.1:8000</a> · llama3.2
+  </footer>
+
+  <script>
+    const BASE_URL = "http://127.0.0.1:8000";
+
+    function switchTab(name, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    function setLoading(tab, on) {
+      document.getElementById(tab + '-loading').classList.toggle('visible', on);
+      document.querySelector(`[onclick="callApi('${tab}')"]`).disabled = on;
+    }
+
+    function showResult(tab, text) {
+      document.getElementById(tab + '-result-text').textContent = text;
+      document.getElementById(tab + '-result').classList.add('visible');
+      document.getElementById(tab + '-error').classList.remove('visible');
+    }
+
+    function showError(tab, msg) {
+      document.getElementById(tab + '-error-text').textContent = msg;
+      document.getElementById(tab + '-error').classList.add('visible');
+      document.getElementById(tab + '-result').classList.remove('visible');
+    }
+
+    async function callApi(tab) {
+      let body = {};
+      let resultKey = '';
+
+      if (tab === 'ask') {
+        const q = document.getElementById('ask-input').value.trim();
+        if (!q) return showError('ask', 'Please enter a question.');
+        body = { question: q };
+        resultKey = 'answer';
+      } else if (tab === 'summarize') {
+        const t = document.getElementById('summarize-input').value.trim();
+        if (!t) return showError('summarize', 'Please enter text to summarize.');
+        body = { text: t };
+        resultKey = 'summary';
+      } else if (tab === 'translate') {
+        const t = document.getElementById('translate-input').value.trim();
+        const l = document.getElementById('translate-lang').value.trim();
+        if (!t) return showError('translate', 'Please enter text to translate.');
+        if (!l) return showError('translate', 'Please enter a target language.');
+        body = { text: t, language: l };
+        resultKey = 'translation';
+      }
+
+      setLoading(tab, true);
+
+      try {
+        const res = await fetch(`${BASE_URL}/${tab}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(tab, data.detail || 'Something went wrong.');
+        } else {
+          showResult(tab, data[resultKey]);
+        }
+      } catch (err) {
+        showError(tab, 'Could not connect to the API. Make sure your FastAPI server is running.');
+      } finally {
+        setLoading(tab, false);
+      }
+    }
+  </script>
+</body>
+</html>
