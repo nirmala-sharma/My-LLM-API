@@ -143,10 +143,22 @@ The API handles the following errors:
 
 ---
 
+## 🎨 Frontend UI
+
+A dark mode frontend is included to interact with all 3 endpoints visually.
+
+To use it:
+1. Start the FastAPI server first
+2. Open `index.html` in your browser
+3. Use the tabs to switch between Ask, Summarize and Translate
+
+---
+
 ## 📁 Project Structure
 
 ```
 MY-LLM-API/
+├── index.html     # frontend UI
 ├── llmapp.py      # main application code
 ├── .gitignore.    # It includes files which are not upload/push to the remote origin
 └── README.md      # project documentation
