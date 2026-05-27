@@ -1,6 +1,9 @@
 # 🤖 LLM API — FastAPI + Ollama
+> A local AI-powered REST API built with FastAPI and Ollama — no API key, no cost, runs entirely on your machine.
 
-A simple REST API built with **FastAPI** that uses a local AI model (Ollama) to answer questions, summarize text, and translate content.
+## 💡 About This Project
+
+I built a REST API using FastAPI in Python that integrates with a local AI model through Ollama. The API has three endpoints — `/ask` for answering questions, `/summarize` for summarizing long text, and `/translate` for translating text into any language. I used Pydantic for request validation to make sure the inputs are always clean and correct, and added proper error handling for cases like empty inputs or the AI model not running. I also built a dark mode frontend in plain HTML and JavaScript that connects to the API, so anyone can use it directly from the browser without touching the docs. The whole AI runs locally on the machine using Llama 3.2 through Ollama, so there's no API key or cost involved.
 
 ---
 
